@@ -8,6 +8,7 @@
 node_modules/
 /static/
 *.iml
+db.sqlite3
 
 ## File-based project format:
 *.iws
