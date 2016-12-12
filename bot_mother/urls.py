@@ -21,9 +21,3 @@ urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^bot/', include('bot.urls'))
 ]
-
-if settings.DEBUG:
-    import debug_toolbar
-    urlpatterns += [
-        url(r'^__debug__/', include(debug_toolbar.urls)),
-    ]
