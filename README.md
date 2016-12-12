@@ -8,6 +8,12 @@ Download and unpack pypy3 under `env` folder from [PyPy website](http://pypy.org
 ./env/bin/pip install -r requirements.txt
 ```
 
+### Make database migrations
+```
+./env/bin/pypy3 manage.py makemigrations
+./env/bin/pypy3 manage.py migrate
+```
+
 ### Run tests (optional)
 ```
 ./env/bin/pypy3 manage.py test
