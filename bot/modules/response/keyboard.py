@@ -11,6 +11,9 @@ class ReplyKeyboard:
     def add_row(self, *buttons):
         self.rows.append(_prepare_row(buttons))
 
+    def __iter__(self):
+        return iter(self.rows)
+
 
 def _prepare_row(row):
     return list(map(str, row))
