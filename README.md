@@ -1,11 +1,19 @@
-### Python virtualenv:
+## Installation instructions:
+### Download pypy3
+Download and unpack pypy3 under `env` folder from [PyPy website](http://pypy.org/download.html#default-with-a-jit-compiler)
+
+### Install pip and dependencied
 ```
-python3 -m venv env
-source env/bin/activate
-pip install -r requirements.txt
+./env/bin/pypy3 -m ensurepip
+./env/bin/pip install -r requirements.txt
 ```
 
-### Django dev server
+### Run tests (optional)
 ```
-./manage.py runserver
+./env/bin/pypy3 manage.py test
+```
+
+### Run Django dev server
+```
+./env/bin/pypy3 manage.py runserver
 ```
