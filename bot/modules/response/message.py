@@ -1,21 +1,21 @@
 
 class Message:
 
-    def __init__(self, text, **options):
+    def __init__(self, text, parse_mode=None):
         self.text = text,
-        self.options = options
+        self.parse_mode = parse_mode
 
 
 class HTML(Message):
 
-    def __init__(self, text, **options):
-        super(HTML, self).__init__(text, parse_mode='HTML', **options)
+    def __init__(self, text):
+        super(HTML, self).__init__(text, parse_mode='HTML')
 
 
 class Markdown(Message):
 
-    def __init__(self, text, **options):
-        super(Markdown, self).__init__(text, parse_mode='Markdown', **options)
+    def __init__(self, text):
+        super(Markdown, self).__init__(text, parse_mode='Markdown')
 
 
 def prepare_message(message):

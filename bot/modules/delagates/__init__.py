@@ -2,9 +2,9 @@ import types
 from itertools import repeat
 from telebot.types import Update
 
+from bot.models import User
 from ..response import prepare_response
 from .utility import apply_middleware
-from bot.models.user import User
 
 
 class ModuleDelegate:
@@ -74,8 +74,8 @@ class ModuleDelegate:
 
     def handle_update(self, user, update):
         assert callable(self.entry_point_handler)
-        assert isinstance(user, User)
         assert isinstance(update, Update)
+        assert isinstance(user, User)
 
         gen = user.state
         if gen is None:
@@ -96,10 +96,13 @@ class ModuleDelegate:
         return prepare_response(response)
 
     def handle_command(self, user, update):
-        assert isinstance(user, User)
         assert isinstance(update, Update)
+        assert isinstance(user, User)
 
-        handler = self.command_handlers[update.message.text.strip()[1:]]
+        handler = self.command_handlers.get(update.message.text.strip()[1:])
+        if handler is None:
+            return self.handle_update(user, update)
+
         response = apply_middleware(
             user,
             handler(user, apply_middleware(user, update, self.update_handlers)),

@@ -1,13 +1,21 @@
-from .message import prepare_message
-from .keyboard import prepare_keyboard
+from .message import prepare_message, Message
+from .markup import prepare_markup
 
 
 class Response:
 
-    def __init__(self, message=None, keyboard=None, **options):
+    def __init__(self, message, markup=None, **options):
+        assert isinstance(message, Message)
+
         self.message = message
-        self.keyboard = keyboard
+        self.markup = markup
         self.options = options
+
+
+_transform = dict(
+    message=prepare_message,
+    markup=prepare_markup
+)
 
 
 def prepare_response(response):
@@ -18,8 +26,8 @@ def prepare_response(response):
         return Response(message=prepare_message(response))
 
     if isinstance(response, tuple):
-        msg, kbd = response
-        return Response(
-            message=prepare_message(msg),
-            keyboard=prepare_keyboard(kbd)
-        )
+        return Response(**dict(map(
+            lambda _type, data: (_type, _transform[_type](data)),
+            ('message', 'markup'),
+            response
+        )))
