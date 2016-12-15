@@ -41,3 +41,22 @@ class DelegatorBot:
             reply_markup=response.markup,
             **response.options
         )
+
+    def update_message(self, message_id, chat_id, response):
+        assert isinstance(response.markup, InlineKeyboardMarkup)
+        self.telebot.edit_message_text(
+            str.strip(response.message.text),
+            chat_id,
+            message_id,
+            parse_mode=response.message.parse_mode,
+            reply_markup=response.markup,
+            **response.options
+        )
+
+    def update_message_markup(self, message_id, chat_id, markup):
+        assert isinstance(markup, InlineKeyboardMarkup)
+        self.telebot.edit_message_reply_markup(
+            chat_id,
+            message_id,
+            reply_markup=markup
+        )
