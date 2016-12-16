@@ -26,8 +26,11 @@ def prepare_response(response):
         return Response(message=prepare_message(response))
 
     if isinstance(response, tuple):
-        return Response(**dict(map(
-            lambda _type, data: (_type, _transform[_type](data)),
-            ('message', 'markup'),
-            response
-        )))
+        return Response(
+            markup=prepare_markup(None),
+            **dict(map(
+                lambda _type, data: (_type, _transform[_type](data)),
+                ('message', 'markup'),
+                response
+            ))
+        )
