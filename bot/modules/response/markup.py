@@ -5,7 +5,8 @@ def prepare_markup(markup):
     if isinstance(markup, (
         ReplyKeyboardMarkup,
         ReplyKeyboardRemove,
-        InlineKeyboardMarkup
+        InlineKeyboardMarkup,
+        ForceReply
     )):
         return markup
 

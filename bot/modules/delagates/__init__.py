@@ -1,3 +1,4 @@
+import logging
 import types
 from itertools import repeat
 from telebot.types import Update
@@ -14,6 +15,7 @@ class ModuleDelegate:
         self.update_handlers = list()
         self.response_handlers = list()
         self.command_handlers = dict()
+        self.callback_query_handlers = list()
 
     def entry_point(self, func):
         """
@@ -21,6 +23,7 @@ class ModuleDelegate:
         :param func: generator factory
         :return: func
         """
+        assert callable(func)
         self.entry_point_handler = func
         return func
 
@@ -31,6 +34,7 @@ class ModuleDelegate:
             models and return update instance
         :return: func
         """
+        assert callable(func)
         self.update_handlers.append(func)
         return func
 
@@ -54,6 +58,7 @@ class ModuleDelegate:
         assert len(commands) > 0
 
         def handler_setter(func):
+            assert callable(func)
             self.register_command(commands, func)
             return func
         return handler_setter
@@ -64,6 +69,7 @@ class ModuleDelegate:
         :param command_or_list: command string or list of command strings
         :param func: commands' handler
         """
+        assert callable(func)
         if isinstance(command_or_list, str):
             self.command_handlers[command_or_list] = func
         else:
@@ -71,6 +77,23 @@ class ModuleDelegate:
             self.command_handlers.update(
                 dict(zip(command_or_list, repeat(func)))
             )
+
+    def callback_query(self, predicate):
+        """
+        Decorator, which registers function and predicate as callback query
+        handler
+        :param predicate: query acceptance predicate
+        :return: decorator
+        """
+        def decorator(func):
+            self.register_callback_query(predicate, func)
+            return func
+        return decorator
+
+    def register_callback_query(self, predicate, handler):
+        assert callable(predicate)
+        assert callable(handler)
+        self.callback_query_handlers.append((predicate, handler))
 
     def handle_update(self, user, update):
         assert callable(self.entry_point_handler)
@@ -99,7 +122,8 @@ class ModuleDelegate:
         assert isinstance(update, Update)
         assert isinstance(user, User)
 
-        handler = self.command_handlers.get(update.message.text.strip()[1:])
+        prep_command = update.message.text.split(maxsplit=1)[0][1:]
+        handler = self.command_handlers.get(prep_command)
         if handler is None:
             return self.handle_update(user, update)
 
@@ -109,3 +133,26 @@ class ModuleDelegate:
             self.response_handlers
         )
         return prepare_response(response)
+
+    def handle_callback_query(self, user, update):
+        assert isinstance(user, User)
+        assert isinstance(update, Update)
+
+        accepted_predicates = filter(
+            lambda cq: cq[0](user, update.callback_query),
+            self.callback_query_handlers
+        )
+        try:
+            _, handler = next(accepted_predicates)
+            response = apply_middleware(
+                user,
+                handler(user, apply_middleware(
+                    user,
+                    update,
+                    self.update_handlers
+                ).callback_query),
+                self.response_handlers
+            )
+            return prepare_response(response)
+        except StopIteration:
+            logging.info('There is no handler for received callback query')
