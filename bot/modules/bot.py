@@ -45,7 +45,7 @@ class DelegatorBot:
     def send_response(self, user, response):
         assert isinstance(user, User)
         if response is not None:
-            # TODO: uncomment it after movement to PyPy3.5 and Celery
+            # TODO: uncomment 'dat after upgrade to PyPy3.5 and Celery
             # cache = caches['user_timestamps']
             # user_cache_key = str(user.user_id)
             #

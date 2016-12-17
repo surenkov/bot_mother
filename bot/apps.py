@@ -1,6 +1,7 @@
 from importlib import import_module
 from django.apps import AppConfig
 from django.conf import settings
+from django.core.urlresolvers import reverse
 
 
 class BotConfig(AppConfig):
@@ -21,4 +22,10 @@ class BotConfig(AppConfig):
                     'Cannot find delegate "%s" in module "%s"' %
                     (delegate_name, module_name)
                 )
-            self.bot_registry[token] = DelegatorBot(token, delegate)
+
+            bot = DelegatorBot(token, delegate)
+            bot.init_hook('{site}{path}'.format(
+                site=settings.BASE_URL,
+                path=reverse('bot_endpoint', kwargs={'token': token})
+            ))
+            self.bot_registry[token] = bot
