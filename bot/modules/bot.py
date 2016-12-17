@@ -1,8 +1,13 @@
 import logging
+from datetime import datetime, timedelta
 
+from django.core.cache import caches
 from telebot import TeleBot
 from telebot.types import *
 from telebot.apihelper import ApiException
+
+from ..celery.tasks import send_message
+from ..models import User
 
 
 class DelegatorBot:
@@ -36,3 +41,24 @@ class DelegatorBot:
         # Simple message
         if message is not None:
             return self.delegate.handle_update(user, update)
+
+    def send_response(self, user, response):
+        assert isinstance(user, User)
+        if response is not None:
+            cache = caches['user_timestamps']
+            user_cache_key = str(user.user_id)
+
+            last_response_timestamp = cache.get(user_cache_key)
+            new_timestamp = datetime.now()
+
+            if last_response_timestamp is not None \
+                    and last_response_timestamp > new_timestamp:
+                new_timestamp = last_response_timestamp + timedelta(seconds=1)
+
+            cache.set(user_cache_key, new_timestamp, timeout=1)
+            send_message.apply_async(
+                (self.telebot.token, user.user_id, response),
+                eta=new_timestamp
+            )
+        else:
+            logging.info('No response was given')

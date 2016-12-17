@@ -1,9 +1,9 @@
 import io
 from abc import ABCMeta, abstractmethod
+from telebot import TeleBot
 
 from .message import prepare_message, Message
 from .markup import prepare_markup
-from ..bot import DelegatorBot
 
 
 class ResponseBase(metaclass=ABCMeta):
@@ -34,8 +34,8 @@ class TextResponse(ResponseBase):
         self.message = message
 
     def send_to(self, bot, chat_id):
-        assert isinstance(bot, DelegatorBot)
-        return bot.telebot.send_message(
+        assert isinstance(bot, TeleBot)
+        return bot.send_message(
             chat_id,
             self.message.text,
             parse_mode=self.message.parse_mode,
@@ -47,8 +47,8 @@ class TextResponse(ResponseBase):
 class PhotoResponse(FileResponseBase):
 
     def send_to(self, bot, chat_id):
-        assert isinstance(bot, DelegatorBot)
-        return bot.telebot.send_photo(
+        assert isinstance(bot, TeleBot)
+        return bot.send_photo(
             chat_id,
             self.data,
             caption=self.caption,
@@ -60,8 +60,8 @@ class PhotoResponse(FileResponseBase):
 class AudioResponse(FileResponseBase):
 
     def send_to(self, bot, chat_id):
-        assert isinstance(bot, DelegatorBot)
-        return bot.telebot.send_audio(
+        assert isinstance(bot, TeleBot)
+        return bot.send_audio(
             chat_id,
             self.data,
             caption=self.caption,
@@ -78,8 +78,8 @@ class VideoResponse(FileResponseBase):
         self.video = video
 
     def send_to(self, bot, chat_id):
-        assert isinstance(bot, DelegatorBot)
-        return bot.telebot.send_video(
+        assert isinstance(bot, TeleBot)
+        return bot.send_video(
             chat_id,
             self.video,
             caption=self.caption,
@@ -90,8 +90,9 @@ class VideoResponse(FileResponseBase):
 
 class DocumentResponse(FileResponseBase):
 
-    def send_to(self, bot: DelegatorBot, chat_id):
-        return bot.telebot.send_document(
+    def send_to(self, bot, chat_id):
+        assert isinstance(bot, TeleBot)
+        return bot.send_document(
             chat_id,
             self.data,
             caption=self.caption,
@@ -107,8 +108,8 @@ class TextUpdate(TextResponse):
         self.message_id = message_id
 
     def send_to(self, bot, chat_id):
-        assert isinstance(bot, DelegatorBot)
-        return bot.telebot.edit_message_text(
+        assert isinstance(bot, TeleBot)
+        return bot.edit_message_text(
             self.message.text,
             chat_id,
             self.message_id,
@@ -126,8 +127,8 @@ class MarkupUpdate(ResponseBase):
         self.message_id = message_id
 
     def send_to(self, bot, chat_id):
-        assert isinstance(bot, DelegatorBot)
-        return bot.telebot.edit_message_reply_markup(
+        assert isinstance(bot, TeleBot)
+        return bot.edit_message_reply_markup(
             chat_id,
             self.message_id,
             reply_markup=self.markup,
