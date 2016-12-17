@@ -6,8 +6,9 @@ from telebot import TeleBot
 from telebot.types import *
 from telebot.apihelper import ApiException
 
-from ..celery.tasks import send_message
 from ..models import User
+from ..queue import message_queue
+from ..queue.tasks import send_message
 
 
 class DelegatorBot:
@@ -56,9 +57,13 @@ class DelegatorBot:
                 new_timestamp = last_response_timestamp + timedelta(seconds=1)
 
             cache.set(user_cache_key, new_timestamp, timeout=1)
-            send_message.apply_async(
-                (self.telebot.token, user.user_id, response),
-                eta=new_timestamp
+            message_queue.enqueue_at(
+                new_timestamp,
+                send_message,
+
+                self.telebot.token,
+                user.user_id,
+                response
             )
         else:
             logging.info('No response was given')

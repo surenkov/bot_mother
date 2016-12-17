@@ -1,10 +1,7 @@
 from telebot import TeleBot
-
-from . import app
 from ..modules.response import ResponseBase
 
 
-@app.task(name='bot.send_message', rate_limit='30/s')
 def send_message(token, chat_id, response):
     """
     Sends message to specific chat
