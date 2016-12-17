@@ -13,7 +13,9 @@ class User(models.Model):
     username = models.CharField(max_length=255, null=True)
 
     def __str__(self):
-        full_name = self.first_name + ' ' + self.last_name
+        full_name = self.first_name
+        if self.last_name is not None:
+            full_name += ' ' + self.last_name
         if self.username is not None:
             full_name += ' (@' + self.username + ')'
         return full_name
