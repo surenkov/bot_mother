@@ -1,15 +1,15 @@
 import logging
 import types
 from itertools import repeat
+from functools import partial
 from telebot.types import Update
 
 from bot.models import User
 from ..response import prepare_response
-from .utility import apply_middleware
+from .utility import apply_middleware, process_generator
 
 
 class ModuleDelegate:
-
     def __init__(self):
         self.entry_point_handler = None
         self.update_handlers = list()
@@ -61,6 +61,7 @@ class ModuleDelegate:
             assert callable(func)
             self.register_command(commands, func)
             return func
+
         return handler_setter
 
     def register_command(self, command_or_list, func):
@@ -85,9 +86,11 @@ class ModuleDelegate:
         :param predicate: query acceptance predicate
         :return: decorator
         """
+
         def decorator(func):
             self.register_callback_query(predicate, func)
             return func
+
         return decorator
 
     def register_callback_query(self, predicate, handler):
@@ -101,16 +104,17 @@ class ModuleDelegate:
         assert isinstance(user, User)
 
         gen = user.state
-        if gen is None:
+        initial = gen is None
+
+        if initial:
             gen = self.entry_point_handler(user)
+
         assert isinstance(gen, types.GeneratorType)
 
         try:
-            response = apply_middleware(
-                user,
-                gen.send(apply_middleware(user, update, self.update_handlers)),
-                self.response_handlers,
-            )
+            response = self._generate_response(
+                partial(process_generator, gen, initial=initial),
+                user, update)
         except StopIteration:
             user.state = None
             response = self.handle_update(user, update)
@@ -127,11 +131,8 @@ class ModuleDelegate:
         if handler is None:
             return self.handle_update(user, update)
 
-        response = apply_middleware(
-            user,
-            handler(user, apply_middleware(user, update, self.update_handlers)),
-            self.response_handlers
-        )
+        response = self._generate_response(
+            partial(handler, user), user, update)
         return prepare_response(response)
 
     def handle_callback_query(self, user, update):
@@ -144,15 +145,15 @@ class ModuleDelegate:
         )
         try:
             _, handler = next(accepted_predicates)
-            response = apply_middleware(
-                user,
-                handler(user, apply_middleware(
-                    user,
-                    update,
-                    self.update_handlers
-                ).callback_query),
-                self.response_handlers
-            )
+            response = self._generate_response(
+                partial(handler, user), user, update)
             return prepare_response(response)
         except StopIteration:
             logging.info('There is no handler for received callback query')
+
+    def _generate_response(self, callback, user, update):
+        return apply_middleware(
+            user,
+            callback(apply_middleware(user, update, self.update_handlers)),
+            self.response_handlers
+        )

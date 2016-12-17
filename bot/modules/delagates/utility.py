@@ -15,3 +15,9 @@ def middleware_reducer(user, data, func):
     new_data = func(user, data)
     assert new_data is not None
     return new_data
+
+
+def process_generator(gen, update, initial=False):
+    if initial:
+        return next(gen)
+    return gen.send(update)
