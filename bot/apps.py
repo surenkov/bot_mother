@@ -13,7 +13,7 @@ class BotConfig(AppConfig):
     def ready(self):
         from .modules.bot import DelegatorBot
 
-        for token, delegate_path in settings['REGISTERED_BOTS'].items():
+        for token, delegate_path in settings.REGISTERED_BOTS.items():
             module_name, delegate_name = delegate_path.rsplit(':', 1)
             delegate = getattr(import_module(module_name), delegate_name)
             if delegate is None:

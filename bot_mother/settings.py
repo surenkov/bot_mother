@@ -147,6 +147,9 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+# Custom settings
+RQ_REDIS_DB = 0
+
 REGISTERED_BOTS = {
     'example-token': 'full.import.path.to.module_delegate:instance'
 }
