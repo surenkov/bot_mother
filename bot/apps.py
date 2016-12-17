@@ -2,8 +2,6 @@ from importlib import import_module
 from django.apps import AppConfig
 from django.conf import settings
 
-from .modules.bot import DelegatorBot
-
 
 class BotConfig(AppConfig):
     name = 'bot'
@@ -13,6 +11,8 @@ class BotConfig(AppConfig):
         self.bot_registry = dict()
 
     def ready(self):
+        from .modules.bot import DelegatorBot
+
         for token, delegate_path in settings['REGISTERED_BOTS'].items():
             module_name, delegate_name = delegate_path.rsplit(':', 1)
             delegate = getattr(import_module(module_name), delegate_name)
