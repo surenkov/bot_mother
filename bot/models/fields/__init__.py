@@ -4,6 +4,9 @@ from django.db import models
 
 class SerializedField(models.BinaryField):
 
+    def from_db_value(self, value, expression, connection, context):
+        return self.to_python(value)
+
     def to_python(self, value):
         if value is None:
             return None
@@ -13,3 +16,4 @@ class SerializedField(models.BinaryField):
         if value is None:
             return None
         return super(SerializedField, self).get_prep_value(pickle.dumps(value))
+
