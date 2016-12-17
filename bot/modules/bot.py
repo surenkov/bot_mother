@@ -7,7 +7,6 @@ from telebot.types import *
 from telebot.apihelper import ApiException
 
 from ..models import User
-from ..queue import message_queue
 from ..queue.tasks import send_message
 
 
@@ -46,24 +45,18 @@ class DelegatorBot:
     def send_response(self, user, response):
         assert isinstance(user, User)
         if response is not None:
-            cache = caches['user_timestamps']
-            user_cache_key = str(user.user_id)
-
-            last_response_timestamp = cache.get(user_cache_key)
-            new_timestamp = datetime.now()
-
-            if last_response_timestamp is not None \
-                    and last_response_timestamp > new_timestamp:
-                new_timestamp = last_response_timestamp + timedelta(seconds=1)
-
-            cache.set(user_cache_key, new_timestamp, timeout=1)
-            message_queue.enqueue_at(
-                new_timestamp,
-                send_message,
-
-                self.telebot.token,
-                user.user_id,
-                response
-            )
+            # TODO: uncomment it after movement to PyPy3.5 and Celery
+            # cache = caches['user_timestamps']
+            # user_cache_key = str(user.user_id)
+            #
+            # last_response_timestamp = cache.get(user_cache_key)
+            # new_timestamp = datetime.now()
+            #
+            # if last_response_timestamp is not None \
+            #         and last_response_timestamp > new_timestamp:
+            #     new_timestamp = last_response_timestamp + timedelta(seconds=1)
+            #
+            # cache.set(user_cache_key, new_timestamp, timeout=1)
+            send_message.delay(self.telebot.token, user.user_id, response)
         else:
             logging.info('No response was given')

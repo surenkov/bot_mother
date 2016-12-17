@@ -1,7 +1,11 @@
 from telebot import TeleBot
+from rq.decorators import job
+
+from . import message_queue
 from ..modules.response import ResponseBase
 
 
+@job(message_queue, result_ttl=10)
 def send_message(token, chat_id, response):
     """
     Sends message to specific chat
@@ -12,4 +16,4 @@ def send_message(token, chat_id, response):
     """
     assert isinstance(token, str)
     assert isinstance(response, ResponseBase)
-    response.send_to(TeleBot(token), chat_id)
+    return response.send_to(TeleBot(token), chat_id)
