@@ -31,7 +31,7 @@ SECRET_KEY = '_d($!-c!#q%^$(a&ofkn1zt(ktbp&j4y7u7!r!phxhtiu@de1b'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*', 'dev.questbot.ru']
 
 
 # Application definition
