@@ -1,5 +1,6 @@
 import io
 from abc import ABCMeta, abstractmethod
+from itertools import repeat
 from telebot import TeleBot
 
 from .message import prepare_message, Message
@@ -137,6 +138,13 @@ class MarkupUpdate(ResponseBase):
 
 
 def prepare_response(response):
+    if isinstance(response, list):
+        return map(prepare_single_response, response)
+
+    return [prepare_single_response(response)]
+
+
+def prepare_single_response(response):
     if isinstance(response, ResponseBase):
         return response
 
@@ -153,12 +161,15 @@ def prepare_response(response):
         props = dict()
         if isinstance(response[0], str):
             props['message'] = prepare_message(response[0])
+
             if res_len > 1 and isinstance(response[1], (list, tuple)):
                 props['markup'] = prepare_markup(response[1])
+
             return TextResponse(**props)
 
         if isinstance(response[0], io.IOBase):
             props['data'] = response[0]
+
             if res_len > 1:
                 if isinstance(response[1], (list, tuple)):
                     props['markup'] = prepare_markup(response[1])
