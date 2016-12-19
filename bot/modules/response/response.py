@@ -1,6 +1,4 @@
-import io
 from abc import ABCMeta, abstractmethod
-from itertools import repeat
 from telebot import TeleBot
 
 from .message import prepare_message, Message
@@ -21,7 +19,7 @@ class ResponseBase(metaclass=ABCMeta):
 class FileResponseBase(ResponseBase, metaclass=ABCMeta):
 
     def __init__(self, data, caption=None, **options):
-        assert isinstance(data, (str, io.IOBase))
+        assert isinstance(data, (str, bytes))
         super(FileResponseBase, self).__init__(**options)
         self.data = data
         self.caption = caption
@@ -73,16 +71,11 @@ class AudioResponse(FileResponseBase):
 
 class VideoResponse(FileResponseBase):
 
-    def __init__(self, video, **options):
-        assert isinstance(video, (str, io.IOBase))
-        super(VideoResponse, self).__init__(**options)
-        self.video = video
-
     def send_to(self, bot, chat_id):
         assert isinstance(bot, TeleBot)
         return bot.send_video(
             chat_id,
-            self.video,
+            self.data,
             caption=self.caption,
             reply_markup=self.markup,
             **self.options
@@ -137,6 +130,13 @@ class MarkupUpdate(ResponseBase):
         )
 
 
+class ResponsePropagation(Exception):
+
+    def __init__(self, response, *args):
+        super(ResponsePropagation, self).__init__(*args)
+        self.response = response
+
+
 def prepare_response(response):
     if isinstance(response, list):
         return map(prepare_single_response, response)
@@ -167,7 +167,7 @@ def prepare_single_response(response):
 
             return TextResponse(**props)
 
-        if isinstance(response[0], io.IOBase):
+        if isinstance(response[0], bytes):
             props['data'] = response[0]
 
             if res_len > 1:

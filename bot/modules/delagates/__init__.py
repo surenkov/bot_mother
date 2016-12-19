@@ -5,7 +5,7 @@ from functools import partial
 from telebot.types import Update
 
 from bot.models import User
-from ..response import prepare_response
+from ..response import prepare_response, ResponsePropagation
 from .utility import apply_middleware, process_generator
 
 
@@ -152,8 +152,11 @@ class ModuleDelegate:
             logging.info('There is no handler for received callback query')
 
     def _generate_response(self, callback, user, update):
-        return apply_middleware(
-            user,
-            callback(apply_middleware(user, update, self.update_handlers)),
-            self.response_handlers
-        )
+        try:
+            return apply_middleware(
+                user,
+                callback(apply_middleware(user, update, self.update_handlers)),
+                self.response_handlers
+            )
+        except ResponsePropagation as e:
+            return e.response
