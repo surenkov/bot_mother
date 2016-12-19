@@ -12,6 +12,8 @@ class User(models.Model):
     last_name = models.CharField(max_length=255, null=True)
     username = models.CharField(max_length=255, null=True)
 
+    is_authorized = models.BooleanField(default=False)
+
     def __str__(self):
         full_name = self.first_name
         if self.last_name is not None:
