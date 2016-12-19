@@ -50,12 +50,9 @@ class DelegatorBot:
             if isinstance(response, ResponseBase):
                 response = [response]
 
-            prev_job = None
             for resp in response:
-                prev_job = send_message.delay(
-                    self.telebot.token, user.user_id, resp,
-                    depends_on=prev_job
-                )
+                assert isinstance(resp, ResponseBase)
+                send_message.delay(self.telebot.token, user.user_id, resp)
 
             # TODO: uncomment 'dat after upgrade to PyPy3.5 and Celery
             # cache = caches['user_timestamps']
