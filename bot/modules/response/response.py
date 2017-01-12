@@ -20,8 +20,7 @@ class InvalidTypeError(Exception):
 
 class ResponseBase(metaclass=ABCMeta):
 
-    def __init__(self, markup=None, **options):
-        self.markup = markup or prepare_markup(None)
+    def __init__(self, **options):
         self.options = options
 
     @abstractmethod
@@ -29,18 +28,26 @@ class ResponseBase(metaclass=ABCMeta):
         pass
 
 
-class FileResponseBase(ResponseBase, metaclass=ABCMeta):
+class MarkupResponseBase(ResponseBase, metaclass=ABCMeta):
+
+    def __init__(self, markup=None, **options):
+        super(MarkupResponseBase, self).__init__(**options)
+        self.markup = markup or prepare_markup(None)
+
+
+class FileResponseBase(MarkupResponseBase, metaclass=ABCMeta):
 
     def __init__(self, data, caption=None, filename=None, **options):
         assert isinstance(data, (str, bytes, io.BufferedIOBase, io.RawIOBase))
         super(FileResponseBase, self).__init__(**options)
 
         if isinstance(data, str):
-            with open(data, 'rb') as fin:
-                data = fin.readall()
+            if os.path.exists(data):
+                with open(data, 'rb') as fin:
+                    data = fin.readall()
 
-                if filename is None:
-                    filename = fin.name
+                    if filename is None:
+                        filename = fin.name
 
         elif isinstance(data, (io.BufferedIOBase, io.RawIOBase)):
             data = data.read(-1)
@@ -72,7 +79,7 @@ class FileResponseBase(ResponseBase, metaclass=ABCMeta):
         return blob
 
 
-class TextResponse(ResponseBase):
+class TextResponse(MarkupResponseBase):
 
     def __init__(self, message, **options):
         assert isinstance(message, (Message, str))
@@ -166,7 +173,7 @@ class TextUpdate(TextResponse):
         )
 
 
-class MarkupUpdate(ResponseBase):
+class MarkupUpdate(MarkupResponseBase):
 
     def __init__(self, message_id, **options):
         assert message_id is not None
@@ -181,6 +188,22 @@ class MarkupUpdate(ResponseBase):
             reply_markup=self.markup,
             **self.options
         )
+
+
+class ChatAction(ResponseBase):
+
+    def __init__(self, action):
+        """
+        :param action:  One of the strings: 'typing', 'upload_photo',
+        'record_video', 'upload_video', 'record_audio', 'upload_audio',
+        'upload_document', 'find_location'.
+        """
+        super(ChatAction, self).__init__()
+        self.action = action
+
+    def send_to(self, bot, chat_id):
+        assert isinstance(bot, TeleBot)
+        return bot.send_chat_action(chat_id, self.action)
 
 
 class ResponsePropagation(Exception):
