@@ -1,7 +1,9 @@
 import logging
 from datetime import datetime, timedelta
 
+from django.conf import settings
 from django.core.cache import caches
+
 from telebot import TeleBot
 from telebot.types import *
 from telebot.apihelper import ApiException
@@ -20,7 +22,10 @@ class DelegatorBot:
     def init_hook(self, webhook_url: str):
         try:
             self.webhook_url = webhook_url
-            return self.telebot.set_webhook(webhook_url)
+            options = {}
+            if hasattr(settings, 'BOT_CERTIFICATE'):
+                options['certificate'] = open(settings.BOT_CERTIFICATE)
+            return self.telebot.set_webhook(webhook_url, **options)
         except ApiException:
             logging.exception('Cannot initialize web hook')
 
