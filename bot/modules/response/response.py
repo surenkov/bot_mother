@@ -75,8 +75,10 @@ class FileResponseBase(ResponseBase, metaclass=ABCMeta):
 class TextResponse(ResponseBase):
 
     def __init__(self, message, **options):
-        assert isinstance(message, Message)
+        assert isinstance(message, (Message, str))
         super(TextResponse, self).__init__(**options)
+        if isinstance(message, str):
+            message = Message(message)
         self.message = message
 
     def send_to(self, bot, chat_id):
