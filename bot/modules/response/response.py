@@ -1,3 +1,8 @@
+import io
+import os
+import mimetypes
+import magic
+
 from abc import ABCMeta, abstractmethod
 from telebot import TeleBot
 
@@ -5,10 +10,18 @@ from .message import prepare_message, Message
 from .markup import prepare_markup
 
 
+class NotAllowedExtensionError(Exception):
+    pass
+
+
+class InvalidTypeError(Exception):
+    pass
+
+
 class ResponseBase(metaclass=ABCMeta):
 
     def __init__(self, markup=None, **options):
-        self.markup = markup
+        self.markup = markup or prepare_markup(None)
         self.options = options
 
     @abstractmethod
@@ -18,11 +31,45 @@ class ResponseBase(metaclass=ABCMeta):
 
 class FileResponseBase(ResponseBase, metaclass=ABCMeta):
 
-    def __init__(self, data, caption=None, **options):
-        assert isinstance(data, (str, bytes))
+    def __init__(self, data, caption=None, filename=None, **options):
+        assert isinstance(data, (str, bytes, io.BufferedIOBase, io.RawIOBase))
         super(FileResponseBase, self).__init__(**options)
+
+        if isinstance(data, str):
+            with open(data, 'rb') as fin:
+                data = fin.readall()
+
+                if filename is None:
+                    filename = fin.name
+
+        elif isinstance(data, (io.BufferedIOBase, io.RawIOBase)):
+            data = data.read(-1)
+
+        if filename is None:
+            with magic.Magic(mime=True) as m:
+                file_type = m.from_buffer(data)
+
+            ext = mimetypes.guess_extension(file_type)
+            if ext is None:
+                raise InvalidTypeError('Can\'t determine type of data source')
+
+            filename = 'file%s' % ext
+
+        ext = os.path.splitext(filename)[1]
+        if not ext \
+                or hasattr(self, 'allowed_extensions') \
+                and ext[1:] not in getattr(self, 'allowed_extensions'):
+            raise NotAllowedExtensionError(
+                'File with "%s" extension is not allowed' % ext)
+
         self.data = data
         self.caption = caption
+        self.filename = filename
+
+    def request_buffer(self):
+        blob = io.BytesIO(self.data)
+        blob.name = self.filename
+        return blob
 
 
 class TextResponse(ResponseBase):
@@ -47,52 +94,56 @@ class PhotoResponse(FileResponseBase):
 
     def send_to(self, bot, chat_id):
         assert isinstance(bot, TeleBot)
-        return bot.send_photo(
-            chat_id,
-            self.data,
-            caption=self.caption,
-            reply_markup=self.markup,
-            **self.options
-        )
+        with self.request_buffer() as data:
+            return bot.send_photo(
+                chat_id,
+                data,
+                caption=self.caption,
+                reply_markup=self.markup,
+                **self.options
+            )
 
 
 class AudioResponse(FileResponseBase):
 
     def send_to(self, bot, chat_id):
         assert isinstance(bot, TeleBot)
-        return bot.send_audio(
-            chat_id,
-            self.data,
-            caption=self.caption,
-            reply_markup=self.markup,
-            **self.options
-        )
+        with self.request_buffer() as data:
+            return bot.send_audio(
+                chat_id,
+                data,
+                caption=self.caption,
+                reply_markup=self.markup,
+                **self.options
+            )
 
 
 class VideoResponse(FileResponseBase):
 
     def send_to(self, bot, chat_id):
         assert isinstance(bot, TeleBot)
-        return bot.send_video(
-            chat_id,
-            self.data,
-            caption=self.caption,
-            reply_markup=self.markup,
-            **self.options
-        )
+        with self.request_buffer() as data:
+            return bot.send_video(
+                chat_id,
+                data,
+                caption=self.caption,
+                reply_markup=self.markup,
+                **self.options
+            )
 
 
 class DocumentResponse(FileResponseBase):
 
     def send_to(self, bot, chat_id):
         assert isinstance(bot, TeleBot)
-        return bot.send_document(
-            chat_id,
-            self.data,
-            caption=self.caption,
-            reply_markup=self.markup,
-            **self.options
-        )
+        with self.request_buffer() as data:
+            return bot.send_document(
+                chat_id,
+                data,
+                caption=self.caption,
+                reply_markup=self.markup,
+                **self.options
+            )
 
 
 class TextUpdate(TextResponse):
