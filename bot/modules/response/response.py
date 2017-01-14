@@ -1,5 +1,4 @@
 import io
-import os
 import mimetypes
 import magic
 
@@ -10,7 +9,7 @@ from .message import prepare_message, Message
 from .markup import prepare_markup
 
 
-class NotAllowedExtensionError(Exception):
+class NotAllowedTypeError(Exception):
     pass
 
 
@@ -37,43 +36,50 @@ class MarkupResponseBase(ResponseBase, metaclass=ABCMeta):
 
 class FileResponseBase(MarkupResponseBase, metaclass=ABCMeta):
 
+    allowed_types = None
+    _magic = magic.Magic(mime=True)
+
+    class RemoteFile:
+
+        def __init__(self, token):
+            self.token = token
+
+        def __enter__(self):
+            return self.token
+
+        def __exit__(self, *args):
+            pass
+
     def __init__(self, data, caption=None, filename=None, **options):
         assert isinstance(data, (str, bytes, io.BufferedIOBase, io.RawIOBase))
         super(FileResponseBase, self).__init__(**options)
 
-        if isinstance(data, str):
-            if os.path.exists(data):
-                with open(data, 'rb') as fin:
-                    data = fin.readall()
+        if isinstance(data, (io.BufferedIOBase, io.RawIOBase)):
+            filename = filename or getattr(data, 'name')
+            data = data.read()
 
-                    if filename is None:
-                        filename = fin.name
+        if not isinstance(data, str) and filename is None:
+            file_type = self._magic.from_buffer(data[:256])
 
-        elif isinstance(data, (io.BufferedIOBase, io.RawIOBase)):
-            data = data.read(-1)
-
-        if filename is None:
-            with magic.Magic(mime=True) as m:
-                file_type = m.from_buffer(data)
+            if self.allowed_types and file_type not in self.allowed_types:
+                raise NotAllowedTypeError(
+                    'Source type "%s" is not supported '
+                    'by this type of response' % file_type)
 
             ext = mimetypes.guess_extension(file_type)
             if ext is None:
-                raise InvalidTypeError('Can\'t determine type of data source')
+                raise InvalidTypeError('Can\'t determine type of source')
 
-            filename = 'file%s' % ext
-
-        ext = os.path.splitext(filename)[1]
-        if not ext \
-                or hasattr(self, 'allowed_extensions') \
-                and ext[1:] not in getattr(self, 'allowed_extensions'):
-            raise NotAllowedExtensionError(
-                'File with "%s" extension is not allowed' % ext)
+            filename = 'public%s' % ext
 
         self.data = data
         self.caption = caption
         self.filename = filename
 
-    def request_buffer(self):
+    def request_data(self):
+        if isinstance(self.data, str):
+            return self.RemoteFile(self.data)
+
         blob = io.BytesIO(self.data)
         blob.name = self.filename
         return blob
@@ -101,9 +107,12 @@ class TextResponse(MarkupResponseBase):
 
 class PhotoResponse(FileResponseBase):
 
+    allowed_types = {'image/jpeg', 'image/png', 'image/gif',
+                     'image/tiff', 'image/tiff-fx'}
+
     def send_to(self, bot, chat_id):
         assert isinstance(bot, TeleBot)
-        with self.request_buffer() as data:
+        with self.request_data() as data:
             return bot.send_photo(
                 chat_id,
                 data,
@@ -115,9 +124,11 @@ class PhotoResponse(FileResponseBase):
 
 class AudioResponse(FileResponseBase):
 
+    allowed_types = {'audio/mpeg', 'audio/MPA', 'audio/mpa-robust'}
+
     def send_to(self, bot, chat_id):
         assert isinstance(bot, TeleBot)
-        with self.request_buffer() as data:
+        with self.request_data() as data:
             return bot.send_audio(
                 chat_id,
                 data,
@@ -129,9 +140,11 @@ class AudioResponse(FileResponseBase):
 
 class VideoResponse(FileResponseBase):
 
+    allowed_types = {'video/mp4'}
+
     def send_to(self, bot, chat_id):
         assert isinstance(bot, TeleBot)
-        with self.request_buffer() as data:
+        with self.request_data() as data:
             return bot.send_video(
                 chat_id,
                 data,
@@ -145,7 +158,7 @@ class DocumentResponse(FileResponseBase):
 
     def send_to(self, bot, chat_id):
         assert isinstance(bot, TeleBot)
-        with self.request_buffer() as data:
+        with self.request_data() as data:
             return bot.send_document(
                 chat_id,
                 data,
