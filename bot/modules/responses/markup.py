@@ -1,4 +1,12 @@
-from telebot.types import *
+from telebot.types import (
+    ReplyKeyboardMarkup,
+    ReplyKeyboardRemove,
+    InlineKeyboardMarkup,
+    ForceReply,
+
+    InlineKeyboardButton,
+    KeyboardButton
+)
 
 
 def prepare_markup(markup):

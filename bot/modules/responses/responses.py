@@ -5,7 +5,7 @@ import magic
 from abc import ABCMeta, abstractmethod
 from telebot import TeleBot
 
-from .message import prepare_message, Message
+from .messages import prepare_message, Message
 from .markup import prepare_markup
 
 
@@ -35,7 +35,6 @@ class MarkupResponseBase(ResponseBase, metaclass=ABCMeta):
 
 
 class FileResponseBase(MarkupResponseBase, metaclass=ABCMeta):
-
     allowed_types = None
     _magic = magic.Magic(mime=True)
 
@@ -219,21 +218,7 @@ class ChatAction(ResponseBase):
         return bot.send_chat_action(chat_id, self.action)
 
 
-class ResponsePropagation(Exception):
-
-    def __init__(self, response, *args):
-        super(ResponsePropagation, self).__init__(*args)
-        self.response = response
-
-
 def prepare_response(response):
-    if isinstance(response, list):
-        return map(prepare_single_response, response)
-
-    return [prepare_single_response(response)]
-
-
-def prepare_single_response(response):
     if isinstance(response, ResponseBase):
         return response
 
@@ -247,25 +232,8 @@ def prepare_single_response(response):
         res_len = len(response)
         assert res_len > 0
 
-        props = dict()
-        if isinstance(response[0], str):
-            props['message'] = prepare_message(response[0])
+        props = dict(message=prepare_message(response[0]))
+        if res_len > 1 and isinstance(response[1], (list, tuple)):
+            props['markup'] = prepare_markup(response[1])
 
-            if res_len > 1 and isinstance(response[1], (list, tuple)):
-                props['markup'] = prepare_markup(response[1])
-
-            return TextResponse(**props)
-
-        if isinstance(response[0], bytes):
-            props['data'] = response[0]
-
-            if res_len > 1:
-                if isinstance(response[1], (list, tuple)):
-                    props['markup'] = prepare_markup(response[1])
-
-                if isinstance(response[1], str):
-                    props['caption'] = response[1]
-                    if res_len > 2 and isinstance(response[2], (list, tuple)):
-                        props['markup'] = prepare_markup(response[2])
-
-            return PhotoResponse(**props)
+        return TextResponse(**props)

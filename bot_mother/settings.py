@@ -46,7 +46,7 @@ INSTALLED_APPS = [
     'bot',
 ]
 
-MIDDLEWARE_CLASSES = [
+MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -152,6 +152,8 @@ STATIC_URL = '/static/'
 # Custom settings
 RQ_REDIS_DB = 0
 
+USER_STATE_DB = 1
+
 REGISTERED_BOTS = {
-    'example-token': 'full.import.path.to.module_delegate:instance'
+    'example-token': 'full.import.path.to.module:instance'
 }

@@ -13,15 +13,12 @@ from .models.user import get_user_from_update
 @require_POST
 def bot_endpoint(request, token):
     bot_registry = apps.get_app_config('bot').bot_registry
-    bot = bot_registry[token]
+    bot = bot_registry.get(token)
+
+    if bot is None:
+        return HttpResponse(status=404)
 
     update = Update.de_json(request.body.encode('utf-8'))
-    user = get_user_from_update(update)
+    bot.process_update(update)
 
-    try:
-        bot.send_response(user, bot.process_update(user, update))
-    except:
-        logging.exception('Exception occurred while processing update')
-    else:
-        user.save()
     return HttpResponse(status=200)

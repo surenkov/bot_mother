@@ -1,75 +1,57 @@
 import logging
-from datetime import datetime, timedelta
-
-from django.conf import settings
-from django.core.cache import caches
-
 from telebot import TeleBot
 from telebot.types import *
 from telebot.apihelper import ApiException
 
-from ..models import User
-from ..queue.tasks import send_message
-from .response import ResponseBase
+from django.conf import settings
+
+from bot.models import TelegramUser
+from bot.modules.modules import ModuleRouter
+from bot.modules.dispatchers import ResponseDispatcher
 
 
-class DelegatorBot:
-    def __init__(self, api_token: str, delegate=None):
-        self.delegate = delegate
-        self.webhook_url = ''
-        self.telebot = TeleBot(api_token)
+class TelegramBot:
+
+    def __init__(self, api_token: str, router: ModuleRouter):
+        assert isinstance(api_token, str)
+        assert isinstance(router, ModuleRouter)
+
+        self.api_token = api_token
+        self.router = router
+        self.tele_bot = TeleBot(api_token)
+        self.response_dispatcher = ResponseDispatcher(api_token)
 
     def init_hook(self, webhook_url: str):
         try:
-            self.webhook_url = webhook_url
             options = {}
             if hasattr(settings, 'BOT_CERTIFICATE'):
                 options['certificate'] = open(settings.BOT_CERTIFICATE)
-            return self.telebot.set_webhook(webhook_url, **options)
+            return self.tele_bot.set_webhook(webhook_url, **options)
         except ApiException:
             logging.exception('Cannot initialize web hook')
 
-    def process_update(self, user, update):
-        assert isinstance(user, User)
+    def process_update(self, update: Update):
         assert isinstance(update, Update)
 
-        message = update.message
-        callback_query = update.callback_query
+        user = TelegramUser.from_update(update)
+        module = self.router.get(user.get_context('module'))
+        if module is None:
+            raise Exception(
+                'Cannot find appropriate module for {}'.format(user))
 
-        # Callback queries
-        if callback_query is not None:
-            return self.delegate.handle_callback_query(user, update)
+        module.handle_update(self.response_dispatcher, user, update)
+        user.save()
 
-        # Command
-        if message is not None and message.text.lstrip().startswith('/'):
-            return self.delegate.handle_command(user, update)
 
-        # Simple message
-        if message is not None:
-            return self.delegate.handle_update(user, update)
+class BotRegistry:
 
-    def send_response(self, user, response):
-        assert isinstance(user, User)
+    def __init__(self):
+        self._registry = dict()
 
-        if response is not None:
-            if isinstance(response, ResponseBase):
-                response = [response]
+    def register(self, bot: TelegramBot):
+        assert isinstance(bot, TelegramBot)
+        self._registry[bot.api_token] = bot
 
-            for resp in response:
-                assert isinstance(resp, ResponseBase)
-                send_message.delay(self.telebot.token, user.user_id, resp)
-
-            # TODO: uncomment 'dat after upgrade to PyPy3.5 and Celery
-            # cache = caches['user_timestamps']
-            # user_cache_key = str(user.user_id)
-            #
-            # last_response_timestamp = cache.get(user_cache_key)
-            # new_timestamp = datetime.now()
-            #
-            # if last_response_timestamp is not None \
-            #         and last_response_timestamp > new_timestamp:
-            #     new_timestamp = last_response_timestamp + timedelta(seconds=1)
-            #
-            # cache.set(user_cache_key, new_timestamp, timeout=1)
-        else:
-            logging.info('No response was given')
+    def get(self, api_token: str):
+        assert isinstance(api_token, str)
+        return self._registry.get(api_token)
