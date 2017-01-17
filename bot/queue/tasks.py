@@ -2,7 +2,7 @@ from telebot import TeleBot
 from rq.decorators import job
 
 from . import message_queue
-from ..modules.response import ResponseBase
+from ..modules.responses import ResponseBase
 
 
 @job(message_queue, result_ttl=10)

@@ -1,1 +1,1 @@
-from .user import TelegramUser, TelegramUserState
+from .user import TelegramUser

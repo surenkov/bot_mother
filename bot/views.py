@@ -1,12 +1,8 @@
-import logging
-
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse
 from django.apps import apps
 from telebot.types import Update
-
-from .models.user import get_user_from_update
 
 
 @csrf_exempt
