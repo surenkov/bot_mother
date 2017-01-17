@@ -12,10 +12,6 @@ https://docs.djangoproject.com/en/1.10/ref/settings/
 
 import os
 
-# Needed by PyPy, it don't work with pure psycopg2
-from psycopg2cffi import compat
-compat.register()
-
 BASE_URL = 'https://dev.questbot.ru:443'
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -152,8 +148,3 @@ STATIC_URL = '/static/'
 # Custom settings
 RQ_REDIS_DB = 0
 
-USER_STATE_DB = 1
-
-REGISTERED_BOTS = {
-    'example-token': 'full.import.path.to.module:instance'
-}
