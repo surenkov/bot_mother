@@ -1,11 +1,11 @@
 import logging
+
 from telebot import TeleBot
 from telebot.types import *
 from telebot.apihelper import ApiException
 
 from django.conf import settings
 
-from bot.models import TelegramUser
 from bot.modules.modules import ModuleRouter
 from bot.modules.dispatchers import ResponseDispatcher
 
@@ -31,6 +31,7 @@ class TelegramBot:
             logging.exception('Cannot initialize web hook')
 
     def process_update(self, update: Update):
+        from bot.models import TelegramUser
         assert isinstance(update, Update)
 
         user = TelegramUser.from_update(update)
@@ -43,15 +44,3 @@ class TelegramBot:
         user.save()
 
 
-class BotRegistry:
-
-    def __init__(self):
-        self._registry = dict()
-
-    def register(self, bot: TelegramBot):
-        assert isinstance(bot, TelegramBot)
-        self._registry[bot.api_token] = bot
-
-    def get(self, api_token: str):
-        assert isinstance(api_token, str)
-        return self._registry.get(api_token)

@@ -1,25 +1,23 @@
 import logging
 from telebot.types import Update
 
-from bot.models import TelegramUser
-from .utility import MiddlewareBotProxy, StopUpdateProcessing
+from .scenarios import UpdateScenarioBase
+from .utility import StopUpdateProcessing
 from .middleware import Middleware
 
 
 class Module:
 
-    def __init__(self, name, initial_state,
-                 message_scenario=None, command_scenario=None,
-                 query_scenario=None, middleware=None):
+    def __init__(self, name, initial_state, scenarios=None, middleware=None):
         self.name = name
         self.initial_state = initial_state
-
-        self.command_handler = command_scenario
-        self.query_handler = query_scenario
-        self.message_handler = message_scenario
+        self.scenarios = scenarios or list()
         self.middleware = middleware or Middleware()
 
     def handle_update(self, bot, user, update):
+        from bot.models import TelegramUser
+        from .utility import MiddlewareBotProxy
+
         assert isinstance(user, TelegramUser)
         assert isinstance(update, Update)
 
@@ -29,42 +27,35 @@ class Module:
         try:
             update = self.middleware.apply_update(user, update)
             bot_proxy = MiddlewareBotProxy(bot, self.middleware)
-
-            message = update.message
-            callback_query = update.callback_query
-
             handled = False
-            # Callback queries
-            if callback_query is not None:
-                handled |= self.query_handler.handle_update(
-                    bot_proxy, user, update)
 
-            # Command
-            if message is not None and message.text.lstrip().startswith('/'):
-                handled |= self.command_handler.handle_update(
-                    bot_proxy, user, update)
-
-            # Simple message
-            if message is not None and not handled:
-                handled |= self.message_handler.handle_update(
-                    bot_proxy, user, update)
+            for update_handler in self.scenarios:
+                can_handle = update_handler.can_handle(user, update, handled)
+                if can_handle:
+                    update_handler.handle_update(bot_proxy, user, update)
+                handled |= can_handle
 
             if not handled:
                 logging.warning('{}\'s response was not handled'.format(user))
         except StopUpdateProcessing:
             pass
 
+    def add_scenario(self, scenario: UpdateScenarioBase):
+        assert isinstance(scenarios, UpdateScenarioBase)
+        self.scenarios.append(scenario)
+
 
 class ModuleRouter:
 
     def __init__(self, initial=None):
         assert isinstance(initial, (Module, str))
-        if isinstance(initial, Module):
-            self.register(initial)
-            initial = initial.name
 
         self.initial = initial
         self._registry = dict()
+
+        if isinstance(initial, Module):
+            self.register(initial)
+            self.initial = initial.name
 
     def register(self, module):
         assert isinstance(module, Module)

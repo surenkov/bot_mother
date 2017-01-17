@@ -9,7 +9,7 @@ class TelegramUser(models.Model):
     last_name = models.CharField(max_length=255, null=True)
     username = models.CharField(max_length=255, null=True)
 
-    context_stack = fields.ArrayField(fields.JSONField())
+    context_stack = fields.JSONField(default=list)
 
     def __str__(self):
         full_name = self.first_name
@@ -31,20 +31,20 @@ class TelegramUser(models.Model):
 
     def set_context(self, inherit=True, **context):
         stack = self.context_stack
-        if not stack:
-            stack.append(context)
 
-        if inherit:
-            stack[-1].update(context)
-        else:
-            stack[-1] = context
+        new_context = {}
+        if stack and inherit:
+            new_context.update(stack[-1])
+
+        new_context.update(context)
+        stack[-1] = new_context
 
     def push_context(self, inherit=True, **context):
         stack = self.context_stack
 
         previous_context = {}
         if stack and inherit:
-            previous_context = dict(stack[-1])
+            previous_context.update(stack[-1])
 
         previous_context.update(context)
         stack.append(previous_context)

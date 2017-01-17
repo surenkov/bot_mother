@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 from django.core.cache import caches
 
-from bot.models import TelegramUser
 from bot.queue.tasks import send_message
 from bot.modules.responses import ResponseBase
 
@@ -13,6 +12,7 @@ class ResponseDispatcher:
         self.api_token = api_token
 
     def respond(self, user, response):
+        from bot.models import TelegramUser
         assert isinstance(user, (TelegramUser, int))
         assert isinstance(response, ResponseBase)
 

@@ -3,10 +3,12 @@ from abc import ABCMeta, abstractmethod
 from itertools import repeat
 
 from telebot.types import Update
-from bot.models import TelegramUser
 
 
 class UpdateScenarioBase(metaclass=ABCMeta):
+    @abstractmethod
+    def can_handle(self, user, update, handled):
+        pass
 
     @abstractmethod
     def handler(self, *args, **kwargs):
@@ -18,9 +20,11 @@ class UpdateScenarioBase(metaclass=ABCMeta):
 
 
 class CallbackQueryScenario(UpdateScenarioBase):
-
     def __init__(self):
         self.handlers = list()
+
+    def can_handle(self, user, update, handled):
+        return not handled and update.callback_query is not None
 
     def handler(self, predicate):
         """
@@ -39,6 +43,7 @@ class CallbackQueryScenario(UpdateScenarioBase):
         return decorator
 
     def handle_update(self, bot, user, update):
+        from bot.models import TelegramUser
         assert isinstance(update, Update)
         assert isinstance(user, TelegramUser)
 
@@ -49,16 +54,19 @@ class CallbackQueryScenario(UpdateScenarioBase):
         try:
             _, handler = next(accepted_predicates)
             handler(bot, user, update)
-            return True
         except StopIteration:
             logging.warning('There is no handler for received callback query')
-        return False
 
 
 class CommandScenario(UpdateScenarioBase):
-
     def __init__(self):
         self.handlers = dict()
+
+    def can_handle(self, user, update, handled):
+        message = update.message
+        return not handled \
+            and message is not None \
+            and message.text.lstrip().startswith('/')
 
     def handler(self, *commands):
         """
@@ -77,6 +85,7 @@ class CommandScenario(UpdateScenarioBase):
         return handler_setter
 
     def handle_update(self, bot, user, update):
+        from bot.models import TelegramUser
         assert isinstance(user, TelegramUser)
         assert isinstance(update, Update)
 
@@ -85,16 +94,16 @@ class CommandScenario(UpdateScenarioBase):
 
         if handler is not None:
             handler(bot, user, update)
-            return True
         else:
             logging.info('No handler for command /%s' % command_text)
-        return False
 
 
 class MessageScenario(UpdateScenarioBase):
-
     def __init__(self):
         self.transitions = dict()
+
+    def can_handle(self, user, update, handled):
+        return not handled and update.message is not None
 
     def handler(self, *states):
         """
@@ -113,6 +122,7 @@ class MessageScenario(UpdateScenarioBase):
         return handler_setter
 
     def handle_update(self, bot, user, update):
+        from bot.models import TelegramUser
         assert isinstance(user, TelegramUser)
         assert isinstance(update, Update)
 
@@ -120,8 +130,6 @@ class MessageScenario(UpdateScenarioBase):
         handler = self.transitions.get(state)
         if handler is not None:
             handler(bot, user, update)
-            return True
         else:
             logging.warning(
                 'No transition form state {} for user {}'.format(state, user))
-        return False
