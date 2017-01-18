@@ -31,9 +31,11 @@ class TelegramUser(models.Model):
 
     def set_context(self, inherit=True, **context):
         stack = self.context_stack
+        if not stack:
+            stack.append({})
 
         new_context = {}
-        if stack and inherit:
+        if inherit:
             new_context.update(stack[-1])
 
         new_context.update(context)
