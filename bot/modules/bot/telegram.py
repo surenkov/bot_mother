@@ -6,8 +6,8 @@ from telebot.apihelper import ApiException
 
 from django.conf import settings
 
-from bot.modules.modules import ModuleRouter
-from bot.modules.dispatchers import ResponseDispatcher
+from ..modules import ModuleRouter
+from ..dispatchers.telegram import CeleryDispatcher
 
 
 class TelegramBot:
@@ -19,7 +19,7 @@ class TelegramBot:
         self.api_token = api_token
         self.router = router
         self.tele_bot = TeleBot(api_token)
-        self.response_dispatcher = ResponseDispatcher(api_token)
+        self.response_dispatcher = CeleryDispatcher(api_token)
 
     def init_hook(self, webhook_url: str):
         try:
@@ -42,5 +42,3 @@ class TelegramBot:
 
         module.handle_update(self.response_dispatcher, user, update)
         user.save()
-
-

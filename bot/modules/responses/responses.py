@@ -19,7 +19,8 @@ class InvalidTypeError(Exception):
 
 class ResponseBase(metaclass=ABCMeta):
 
-    def __init__(self, **options):
+    def __init__(self, delay=0.0, **options):
+        self.delay = delay
         self.options = options
 
     @abstractmethod
@@ -30,7 +31,7 @@ class ResponseBase(metaclass=ABCMeta):
 class MarkupResponseBase(ResponseBase, metaclass=ABCMeta):
 
     def __init__(self, markup=None, **options):
-        super(MarkupResponseBase, self).__init__(**options)
+        super().__init__(**options)
         self.markup = markup or prepare_markup(None)
 
 
@@ -51,7 +52,7 @@ class FileResponseBase(MarkupResponseBase, metaclass=ABCMeta):
 
     def __init__(self, data, caption=None, filename=None, **options):
         assert isinstance(data, (str, bytes, io.BufferedIOBase, io.RawIOBase))
-        super(FileResponseBase, self).__init__(**options)
+        super().__init__(**options)
 
         if isinstance(data, (io.BufferedIOBase, io.RawIOBase)):
             filename = filename or getattr(data, 'name')
@@ -88,7 +89,7 @@ class TextResponse(MarkupResponseBase):
 
     def __init__(self, message, **options):
         assert isinstance(message, (Message, str))
-        super(TextResponse, self).__init__(**options)
+        super().__init__(**options)
         if isinstance(message, str):
             message = Message(message)
         self.message = message
@@ -170,7 +171,7 @@ class DocumentResponse(FileResponseBase):
 class TextUpdate(TextResponse):
     def __init__(self, message, message_id, **options):
         assert message_id is not None
-        super(TextUpdate, self).__init__(message, **options)
+        super().__init__(message, **options)
         self.message_id = message_id
 
     def send_to(self, bot, chat_id):
@@ -189,7 +190,7 @@ class MarkupUpdate(MarkupResponseBase):
 
     def __init__(self, message_id, **options):
         assert message_id is not None
-        super(MarkupUpdate, self).__init__(**options)
+        super().__init__(**options)
         self.message_id = message_id
 
     def send_to(self, bot, chat_id):
@@ -210,7 +211,7 @@ class ChatAction(ResponseBase):
         'record_video', 'upload_video', 'record_audio', 'upload_audio',
         'upload_document', 'find_location'.
         """
-        super(ChatAction, self).__init__()
+        super().__init__()
         self.action = action
 
     def send_to(self, bot, chat_id):

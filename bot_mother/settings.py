@@ -149,5 +149,11 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 # Custom settings
-RQ_REDIS_DB = 0
+CELERY_BROKER = 'redis://localhost:6379/0'
+
+CELERY_BACKEND = 'redis://localhost:6379/1'
+
+USER_CONTEXT_REDIS_CONN = 'redis://localhost:6379/2'
+
+RESPONSE_TIMESTAMP_REDIS_CONN = 'redis://localhost:6379/3'
 

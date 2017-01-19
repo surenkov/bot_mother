@@ -9,10 +9,12 @@ class BotConfig(AppConfig):
     def __init__(self, app_name, app_module):
         from .modules.bot.registry import BotRegistry
 
-        super(BotConfig, self).__init__(app_name, app_module)
+        super().__init__(app_name, app_module)
         self.bot_registry = BotRegistry()
 
     def ready(self):
+        # noinspection PyUnresolvedReferences
+        import bot.modules.celery
         from bot.modules import TelegramBot, ModuleRouter
 
         bot = TelegramBot('token', router=ModuleRouter('example_module_name'))

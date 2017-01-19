@@ -1,12 +1,11 @@
 from telebot import TeleBot
-from rq.decorators import job
 
-from . import message_queue
-from ..modules.responses import ResponseBase
+from . import app
+from ..responses import ResponseBase
 
 
-@job(message_queue, result_ttl=10)
-def send_message(token, chat_id, response):
+@app.task(name='bot.telegram.send_message', rate_limit='30/s', queue='default')
+def send_telegram_message(token, chat_id, response):
     """
     Sends message to specific chat
     :param token: bot's token

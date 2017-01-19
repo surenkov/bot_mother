@@ -9,13 +9,13 @@ class Message:
 class HTML(Message):
 
     def __init__(self, text):
-        super(HTML, self).__init__(text, parse_mode='HTML')
+        super().__init__(text, parse_mode='HTML')
 
 
 class Markdown(Message):
 
     def __init__(self, text):
-        super(Markdown, self).__init__(text, parse_mode='Markdown')
+        super().__init__(text, parse_mode='Markdown')
 
 
 def prepare_message(message):
