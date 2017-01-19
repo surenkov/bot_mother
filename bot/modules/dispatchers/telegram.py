@@ -22,10 +22,10 @@ class CeleryDispatcher:
         if isinstance(user, TelegramUser):
             user = user.user_id
 
-        current_ts = (datetime.utcnow() - timedelta(seconds=1)).timestamp()
-        new_ts = max(
-            float(self._redis_conn.get(user) or current_ts) + 1,
-            current_ts + response.delay + 1
+        current_ts = datetime.utcnow().timestamp() - 1
+        new_ts = 1 + max(
+            float(self._redis_conn.get(user) or current_ts),
+            current_ts + response.delay
         )
         self._redis_conn.setex(user, new_ts, 1)
         return send_telegram_message.apply_async(
