@@ -1,4 +1,4 @@
-from functools import reduce, partial
+from bot.modules.responses import prepare_response
 
 
 class Middleware:
@@ -25,23 +25,29 @@ class Middleware:
             user and response models and return response instance
         :return: func
         """
+        assert callable(func)
         self.response_handlers.append(func)
         return func
 
     def apply_response(self, user, response):
-        return reduce(
-            partial(middleware_reducer, user),
-            self.response_handlers,
-            response
-        )
+        for handler in self.response_handlers:
+            response = handler(user, response)
+        return response
 
     def apply_update(self, user, update):
-        return reduce(
-            partial(middleware_reducer, user),
-            self.update_handlers,
-            update
+        for handler in self.update_handlers:
+            update = handler(user, update)
+        return update
+
+
+class MiddlewareProxy:
+
+    def __init__(self, bot, middleware):
+        self.bot = bot
+        self.middleware = middleware
+
+    def respond(self, user, response):
+        return self.bot.respond(
+            user,
+            self.middleware.apply_response(user, prepare_response(response))
         )
-
-
-def middleware_reducer(user, data, reducer):
-    return reducer(user, data)
