@@ -1,15 +1,19 @@
+import json
+import redis
+
 from django.db import models
-from django.contrib.postgres import fields
+from django.conf import settings
+
 from telebot.types import Update
 
 
 class TelegramUser(models.Model):
+    _redis_conn = redis.from_url(settings.USER_CONTEXT_REDIS_CONN)
+
     user_id = models.IntegerField(primary_key=True)
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255, null=True)
     username = models.CharField(max_length=255, null=True)
-
-    context_stack = fields.JSONField(default=list)
 
     def __str__(self):
         full_name = self.first_name
@@ -20,41 +24,42 @@ class TelegramUser(models.Model):
         return full_name
 
     def get_context(self, field=None):
-        stack = self.context_stack
-        if not stack:
-            stack.append({})
-
-        context = stack[-1]
-        if field is None:
-            return context
-        return context.get(field)
+        context = _decode_context(self._redis_conn.lindex(self.user_id, 0))
+        if field is not None:
+            return context.get(field)
+        return context
 
     def set_context(self, inherit=True, **context):
-        stack = self.context_stack
-        if not stack:
-            stack.append({})
+        conn = self._redis_conn
+        new_context = dict()
+        stack_head = conn.lpop(self.user_id)
 
-        new_context = {}
         if inherit:
-            new_context.update(stack[-1])
+            new_context.update(_decode_context(stack_head))
 
         new_context.update(context)
-        stack[-1] = new_context
+        return conn.lpush(self.user_id, _encode_context(new_context))
+
+    def setdefault_context(self, **context):
+        conn = self._redis_conn
+        context.update(_decode_context(conn.lpop(self.user_id)))
+        return conn.lpush(self.user_id, _encode_context(context))
 
     def push_context(self, inherit=True, **context):
-        stack = self.context_stack
+        conn = self._redis_conn
+        new_context = dict()
 
-        previous_context = {}
-        if stack and inherit:
-            previous_context.update(stack[-1])
+        if inherit:
+            new_context.update(_decode_context(conn.lindex(self.user_id, 0)))
 
-        previous_context.update(context)
-        stack.append(previous_context)
+        new_context.update(context)
+        return conn.lpush(self.user_id, _encode_context(new_context))
 
-    def pop_context(self):
-        stack = self.context_stack
-        if stack:
-            del stack[-1]
+    def pop_context(self, empty=False):
+        conn = self._redis_conn
+        if empty:
+            conn.delete(self.user_id)
+        return _decode_context(conn.lpop(self.user_id))
 
     @staticmethod
     def from_update(update: Update):
@@ -82,3 +87,13 @@ class TelegramUser(models.Model):
             ))
         )
         return user
+
+
+def _decode_context(data):
+    if isinstance(data, (bytes, bytearray)):
+        data = data.decode()
+    return json.loads(data or '{}')
+
+
+def _encode_context(data):
+    return json.dumps(data or {})
