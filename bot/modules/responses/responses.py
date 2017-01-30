@@ -18,7 +18,6 @@ class InvalidTypeError(Exception):
 
 
 class ResponseBase(metaclass=ABCMeta):
-
     def __init__(self, delay=0.0, **options):
         self.delay = delay
         self.options = options
@@ -29,7 +28,6 @@ class ResponseBase(metaclass=ABCMeta):
 
 
 class MarkupResponseBase(ResponseBase, metaclass=ABCMeta):
-
     def __init__(self, markup=None, **options):
         super().__init__(**options)
         self.markup = markup or prepare_markup(None)
@@ -86,7 +84,6 @@ class FileResponseBase(MarkupResponseBase, metaclass=ABCMeta):
 
 
 class TextResponse(MarkupResponseBase):
-
     def __init__(self, message, **options):
         assert isinstance(message, (Message, str))
         super().__init__(**options)
@@ -105,8 +102,25 @@ class TextResponse(MarkupResponseBase):
         )
 
 
-class PhotoResponse(FileResponseBase):
+class LocationResponse(MarkupResponseBase):
+    def __init__(self, longtitude, latitude, **options):
+        assert isinstance(longtitude, float)
+        assert isinstance(latitude, float)
+        super().__init__(**options)
+        self.longtitude = longtitude
+        self.latitude = latitude
 
+    def send_to(self, bot, chat_id):
+        assert isinstance(bot, TeleBot)
+        return bot.send_location(
+            chat_id,
+            longitude=self.longtitude,
+            latitude=self.latitude,
+            reply_markup=self.markup,
+            **self.options)
+
+
+class PhotoResponse(FileResponseBase):
     allowed_types = {'image/jpeg', 'image/png', 'image/gif',
                      'image/tiff', 'image/tiff-fx'}
 
@@ -123,7 +137,6 @@ class PhotoResponse(FileResponseBase):
 
 
 class AudioResponse(FileResponseBase):
-
     allowed_types = {'audio/mpeg', 'audio/MPA', 'audio/mpa-robust'}
 
     def send_to(self, bot, chat_id):
@@ -139,7 +152,6 @@ class AudioResponse(FileResponseBase):
 
 
 class VideoResponse(FileResponseBase):
-
     allowed_types = {'video/mp4'}
 
     def send_to(self, bot, chat_id):
@@ -155,7 +167,6 @@ class VideoResponse(FileResponseBase):
 
 
 class DocumentResponse(FileResponseBase):
-
     def send_to(self, bot, chat_id):
         assert isinstance(bot, TeleBot)
         with self.request_data() as data:
@@ -187,7 +198,6 @@ class TextUpdate(TextResponse):
 
 
 class MarkupUpdate(MarkupResponseBase):
-
     def __init__(self, message_id, **options):
         assert message_id is not None
         super().__init__(**options)
@@ -204,7 +214,6 @@ class MarkupUpdate(MarkupResponseBase):
 
 
 class ChatAction(ResponseBase):
-
     def __init__(self, action):
         """
         :param action:  One of the strings: 'typing', 'upload_photo',
