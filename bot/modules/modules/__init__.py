@@ -32,6 +32,12 @@ class Module:
             if scenario.can_handle(user, update):
                 scenario.handle_update(bot_proxy, user, update)
 
+    def add_scenario(self, *scenarios):
+        self.scenarios.extend(scenarios)
+
+    def set_middleware(self, middleware):
+        self.middleware = middleware
+
 
 class ModuleRouter:
 

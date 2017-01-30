@@ -1,6 +1,6 @@
 import logging
 from abc import ABCMeta, abstractmethod
-from itertools import repeat
+from itertools import repeat, chain, starmap
 
 from telebot.types import Update
 
@@ -58,6 +58,7 @@ class MessageScenario(UpdateScenarioBase):
     def __init__(self):
         self.transitions = dict()
         self.commands = dict()
+        self.command_aliases = dict()
 
     def can_handle(self, user, update):
         return update.message is not None
@@ -78,7 +79,7 @@ class MessageScenario(UpdateScenarioBase):
 
         return handler_setter
 
-    def command_handler(self, *commands):
+    def command_handler(self, *commands, **aliases):
         """
         Decorator, which sets decorated function as command handler
         for each command in commands
@@ -89,7 +90,13 @@ class MessageScenario(UpdateScenarioBase):
 
         def handler_setter(handler):
             assert callable(handler)
-            self.commands.update(dict(zip(commands, repeat(handler))))
+            self.commands.update(zip(
+                chain(commands, aliases.keys()), repeat(handler)
+            ))
+            self.command_aliases.update(starmap(
+                lambda command, alias: (alias.lower(), command),
+                aliases.items()
+            ))
             return handler
 
         return handler_setter
@@ -100,11 +107,13 @@ class MessageScenario(UpdateScenarioBase):
         assert isinstance(update, Update)
 
         handler = None
-        message_text = update.message.text.lstrip()
+        message_text = update.message.text.strip().lower()
 
         if message_text.startswith('/'):
-            command_text = message_text.split(maxsplit=1)[0][1:]
-            handler = self.commands.get(command_text)
+            handler = self.commands.get(message_text.split(maxsplit=1)[0][1:])
+
+        elif message_text in self.command_aliases:
+            handler = self.commands.get(self.command_aliases.get(message_text))
 
         if handler is None:
             state = user.get_context('state')
@@ -114,4 +123,4 @@ class MessageScenario(UpdateScenarioBase):
             handler(bot, user, update.message)
         else:
             logging.warning('No handler found for {} with message "{}"'
-                            .format(user, message_text))
+                            .format(user, update.message.text))
