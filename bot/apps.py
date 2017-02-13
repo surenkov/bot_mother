@@ -16,10 +16,10 @@ class BotConfig(AppConfig):
         # noinspection PyUnresolvedReferences
         import bot.modules.celery
         from bot.modules import TelegramBot, ModuleRouter
-
-        bot = TelegramBot('token', router=ModuleRouter('example_module_name'))
+        token = settings.BOT_API_TOKEN
+        bot = TelegramBot(token, router=ModuleRouter('example_module_name'))
         bot.init_hook('{site}{path}'.format(
             site=settings.BASE_URL,
-            path=reverse('bot_endpoint', kwargs={'token': 'token'})
+            path=reverse('bot_endpoint', kwargs={'token': token})
         ))
         self.bot_registry.register(bot)
