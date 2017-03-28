@@ -19,10 +19,18 @@ class CeleryDispatcher:
     def respond(self, user, response):
         from bot.models import TelegramUser
         assert isinstance(user, (TelegramUser, int))
-        assert isinstance(response, ResponseBase)
+        assert isinstance(response, (ResponseBase, Iterable))
 
         if isinstance(user, TelegramUser):
             user = user.user_id
+
+        if isinstance(response, ResponseBase):
+            response = [response]
+
+        return list(map(partial(self._respond_single, user), response))
+
+    def _respond_single(self, user: int, response: ResponseBase):
+        assert isinstance(response, ResponseBase)
 
         current_ts = datetime.utcnow().timestamp() - 1
         new_ts = 1 + max(
@@ -34,7 +42,3 @@ class CeleryDispatcher:
             (self.api_token, user, response),
             eta=datetime.utcfromtimestamp(current_ts)
         )
-
-    def respond_many(self, user, responses: Iterable):
-        assert isinstance(responses, Iterable)
-        return list(map(partial(self.respond, user), responses))
