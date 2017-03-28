@@ -1,6 +1,8 @@
 import redis
 
-from datetime import datetime, timedelta
+from collections.abc import Iterable
+from datetime import datetime
+from functools import partial
 from django.conf import settings
 
 from ..responses import ResponseBase
@@ -32,3 +34,7 @@ class CeleryDispatcher:
             (self.api_token, user, response),
             eta=datetime.utcfromtimestamp(current_ts)
         )
+
+    def respond_many(self, user, responses: Iterable):
+        assert isinstance(responses, Iterable)
+        return list(map(partial(self.respond, user), responses))
