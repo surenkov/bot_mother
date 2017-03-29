@@ -31,6 +31,7 @@ class CeleryDispatcher:
 
     def _respond_single(self, user: int, response: ResponseBase):
         assert isinstance(response, ResponseBase)
+        assert isinstance(user, int)
 
         current_ts = datetime.utcnow().timestamp() - 1
         new_ts = 1 + max(
